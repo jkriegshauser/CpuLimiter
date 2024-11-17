@@ -13,3 +13,29 @@ a utility that would *lie* to the game about the system's CPU topology, essentia
 Hence, CpuLimiter.
 
 Enjoy!
+
+## Building Instructions
+
+1. Clone this repo (or your fork of it)
+2. Make sure to get submodules: `git submodule update --init`
+3. In your Visual Studio Developer Command Prompt from in the Detours directory, build Detours with `nmake`.
+4. In Visual Studio, build CpuLimiter (*Release* configuration recommended).
+
+## Installing Instructions
+
+Installation can be tricky since games often have DRM that look for modifications and balk. *Assassin's Creed: Unity*
+(which was the impetus for this project) did exactly that.
+
+If you can launch a game directly, you might be able to launch it with Detours' `withdll.exe`:
+
+```bat
+withdll.exe /d:CpuLimiter.dll <Your game launch instructions>
+```
+
+You can also patch a game (or maybe a dependent DLL) by using Detours' `setdll.exe`:
+
+```bat
+setdll.exe /d:CpuLimiter.dll <exe or dll binary>
+```
+
+For Assassin's Creed: Unity, I patched *NvGsa.x64.dll* since the game executable detected the modification.
