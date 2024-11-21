@@ -53,7 +53,6 @@ typedef BOOL(WINAPI* GetLogicalProcessorInformation_t)(PSYSTEM_LOGICAL_PROCESSOR
 typedef BOOL(WINAPI* GetLogicalProcessorInformationEx_t)(LOGICAL_PROCESSOR_RELATIONSHIP,
                                                          PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX,
                                                          PDWORD);
-typedef LPTOP_LEVEL_EXCEPTION_FILTER(WINAPI* SetUnhandledExceptionFilter_t)(LPTOP_LEVEL_EXCEPTION_FILTER filter);
 
 // TODO: CPU Set support?
 // TODO: Hybrid CPU detection? Offloading efficiency cores?
@@ -75,7 +74,6 @@ static SetThreadIdealProcessor_t OrigSetThreadIdealProcessor;
 static SetThreadIdealProcessorEx_t OrigSetThreadIdealProcessorEx;
 static GetLogicalProcessorInformation_t OrigGetLogicalProcessorInformation;
 static GetLogicalProcessorInformationEx_t OrigGetLogicalProcessorInformationEx;
-static SetUnhandledExceptionFilter_t OrigSetUnhandledExceptionFilter;
 
 // Needed BINK types follow
 typedef int32_t S32;
@@ -691,34 +689,6 @@ static BOOL WINAPI MyGetLogicalProcessorInformationEx(LOGICAL_PROCESSOR_RELATION
     return TRUE;
 }
 
-bool g_filterInstalled;
-static LPTOP_LEVEL_EXCEPTION_FILTER g_exceptionFilter;
-
-static LONG MyExceptionFilter(struct _EXCEPTION_POINTERS* ExceptionInfo)
-{
-    if (ExceptionInfo->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION)
-        Sleep(INFINITE);
-
-    return g_exceptionFilter(ExceptionInfo);
-}
-
-static LPTOP_LEVEL_EXCEPTION_FILTER MySetUnhandledExceptionFilter(LPTOP_LEVEL_EXCEPTION_FILTER filter)
-{
-    LPTOP_LEVEL_EXCEPTION_FILTER ret;
-
-    if (!g_filterInstalled)
-    {
-        g_filterInstalled = true;
-        g_exceptionFilter = OrigSetUnhandledExceptionFilter(MyExceptionFilter);
-    }
-
-    Log("SetUnhandledExceptionFilter(%p) -> %p", filter, g_exceptionFilter);
-    ret = g_exceptionFilter;
-    g_exceptionFilter = filter;
-
-    return ret;
-}
-
 static HWND g_window;
 static LONG g_width, g_height;
 static float g_aspect;
@@ -961,7 +931,6 @@ static void InstallDetours()
     HOOK(SetThreadIdealProcessorEx, hKernel32);
     HOOK(GetLogicalProcessorInformation, hKernel32);
     HOOK(GetLogicalProcessorInformationEx, hKernel32);
-    HOOK(SetUnhandledExceptionFilter, hKernel32);
 
     // Handle bink detours
     g_bink = LoadLibraryW(L"bink2w64.dll");
@@ -1003,7 +972,6 @@ static void RestoreDetours()
     UNHOOK(SetThreadIdealProcessorEx);
     UNHOOK(GetLogicalProcessorInformation);
     UNHOOK(GetLogicalProcessorInformationEx);
-    UNHOOK(SetUnhandledExceptionFilter);
 
     UNHOOK(BinkOpen);
     UNHOOK(BinkClose);
