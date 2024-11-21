@@ -720,8 +720,8 @@ static LPTOP_LEVEL_EXCEPTION_FILTER MySetUnhandledExceptionFilter(LPTOP_LEVEL_EX
 }
 
 static HWND g_window;
-U32 g_width, g_height;
-float g_aspect;
+static LONG g_width, g_height;
+static float g_aspect;
 
 typedef struct MyBink
 {
@@ -766,6 +766,7 @@ static void freeMyBink(HBINK bink)
 static BOOL CALLBACK EnumFunc(HWND hwnd, LPARAM lp)
 {
     DWORD pid;
+    LONG width, height;
     RECT wnd = { 0 }, rect = { 0 };
 
     GetWindowThreadProcessId(hwnd, &pid);
@@ -774,11 +775,14 @@ static BOOL CALLBACK EnumFunc(HWND hwnd, LPARAM lp)
 
     GetWindowRect(hwnd, &wnd);
     GetClientRect(hwnd, &rect);
-    if ((rect.right - rect.left) > 0 && (rect.bottom - rect.top) > 0)
+    width = rect.right - rect.left;
+    height = rect.bottom - rect.top;
+    // Take the largest window
+    if (width > g_width && height > g_height)
     {
         g_window = hwnd;
-        g_width = rect.right - rect.left;
-        g_height = rect.bottom - rect.top;
+        g_width = width;
+        g_height = height;
         g_aspect = (float)g_width / (float)g_height;
     }
     Log("HWND: %p rect(%d,%d - %d,%d) client(%d,%d - %d,%d)%s", hwnd, wnd.left, wnd.top, wnd.right, wnd.bottom,
@@ -820,6 +824,10 @@ static HBINK MyBinkOpen(const char* name, BINK_OPEN_FLAGS flags)
                         b->origWidth, aspect, g_aspect, retval->Width);
                 }
             }
+        }
+        else
+        {
+            Log("Suitable window not found!");
         }
     }
 
