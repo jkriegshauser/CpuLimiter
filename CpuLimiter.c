@@ -871,7 +871,7 @@ static void MyBinkRegisterFrameBuffers(HBINK bink, BINKFRAMEBUFFERS* set)
         {
             if (set->Frames[i].YPlane.Buffer)
             {
-                memset(set->Frames[i].YPlane.Buffer, 16, set->Frames[i].YPlane.BufferPitch * set->YABufferHeight);
+                memset(set->Frames[i].YPlane.Buffer, 0, set->Frames[i].YPlane.BufferPitch * set->YABufferHeight);
                 centerPlane(my, &set->Frames[i].YPlane, set->YABufferWidth, set->YABufferHeight);
             }
             if (set->Frames[i].cRPlane.Buffer)
