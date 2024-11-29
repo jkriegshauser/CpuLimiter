@@ -32,7 +32,7 @@
 #    endif
 #endif
 
-#define OVERRIDE_BINK 1
+#define OVERRIDE_BINK 0
 
 #define PROCINFO_LOGGING (LOGGING && 0)
 
