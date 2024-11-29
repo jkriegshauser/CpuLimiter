@@ -32,6 +32,8 @@
 #    endif
 #endif
 
+#define OVERRIDE_BINK 1
+
 #define PROCINFO_LOGGING (LOGGING && 0)
 
 // Typedefs for functions that we'll be hooking
@@ -783,6 +785,7 @@ static HBINK MyBinkOpen(const char* name, BINK_OPEN_FLAGS flags)
             float aspect = (float)retval->Width / (float)retval->Height;
             if ((g_aspect - aspect) > 0.1f) // 16:9 -> 16:10 (lower) is okay, but 16:9 -> 32:9 (higher) is not :P
             {
+#if OVERRIDE_BINK
                 MyBink* b = newMyBink();
                 if (b)
                 {
@@ -793,6 +796,9 @@ static HBINK MyBinkOpen(const char* name, BINK_OPEN_FLAGS flags)
                     Log("  Assigned to g_binks[%zu]: origWidth=%u aspect=%f g_aspect=%f; new width=%u", b - g_binks,
                         b->origWidth, aspect, g_aspect, retval->Width);
                 }
+#else
+                Log("  BINK overriding disabled: origWidth=%u aspect=%f g_aspect=%f", retval->Width, aspect, g_aspect);
+#endif
             }
         }
         else
