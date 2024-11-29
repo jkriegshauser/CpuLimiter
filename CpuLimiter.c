@@ -11,7 +11,11 @@
 
 #include <windows.h>
 #include <winerror.h>
+
+#pragma warning(push)
+#pragma warning(disable : 4201) // nonstandard extension used: nameless struct/union
 #include <detours.h>
+#pragma warning(pop)
 
 #include <stdio.h>
 #include <stdbool.h>
@@ -330,8 +334,11 @@ static const char* GetName(LOGICAL_PROCESSOR_RELATIONSHIP r)
     return "Unknown";
 }
 
-static LogLogicalProcessorInformation(const char* name, PSYSTEM_LOGICAL_PROCESSOR_INFORMATION Buffer, DWORD count)
+static void LogLogicalProcessorInformation(const char* name, PSYSTEM_LOGICAL_PROCESSOR_INFORMATION Buffer, DWORD count)
 {
+    _CRT_UNUSED(name);
+    _CRT_UNUSED(Buffer);
+    _CRT_UNUSED(count);
 #if PROCINFO_LOGGING
     Log("LogicalProcessorInformation (%s) - %u entries", name, count);
     const PSYSTEM_LOGICAL_PROCESSOR_INFORMATION end = Buffer + count;
@@ -366,11 +373,15 @@ static LogLogicalProcessorInformation(const char* name, PSYSTEM_LOGICAL_PROCESSO
 #endif
 }
 
-static LogLogicalProcessorInformationEx(const char* name,
-                                        LOGICAL_PROCESSOR_RELATIONSHIP Relationship,
-                                        PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX Buffer,
-                                        DWORD bytes)
+static void LogLogicalProcessorInformationEx(const char* name,
+                                             LOGICAL_PROCESSOR_RELATIONSHIP Relationship,
+                                             PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX Buffer,
+                                             DWORD bytes)
 {
+    _CRT_UNUSED(name);
+    _CRT_UNUSED(Relationship);
+    _CRT_UNUSED(Buffer);
+    _CRT_UNUSED(bytes);
 #if PROCINFO_LOGGING
     Log("LogicalProcessorInformationEx (%s) - Relationship=%d - %u bytes", name, Relationship, bytes);
     size_t i = 0;
@@ -581,9 +592,9 @@ static BOOL CacheCPUInfoExLocked(LOGICAL_PROCESSOR_RELATIONSHIP Relationship)
                 if (read->Group.ActiveGroupCount > 1)
                     read->Group.ActiveGroupCount = 1;
                 if (read->Group.GroupInfo[0].ActiveProcessorCount > kNumCpus)
-                    read->Group.GroupInfo[0].ActiveProcessorCount = kNumCpus;
+                    read->Group.GroupInfo[0].ActiveProcessorCount = (BYTE)kNumCpus;
                 if (read->Group.GroupInfo[0].MaximumProcessorCount > kNumCpus)
-                    read->Group.GroupInfo[0].MaximumProcessorCount = kNumCpus;
+                    read->Group.GroupInfo[0].MaximumProcessorCount = (BYTE)kNumCpus;
                 read->Group.GroupInfo[0].ActiveProcessorMask &= kCpuMask;
                 size = (DWORD)((PBYTE)&read->Group.GroupInfo[1] - (PBYTE)read);
                 break;
@@ -740,6 +751,8 @@ static BOOL CALLBACK EnumFunc(HWND hwnd, LPARAM lp)
     DWORD pid;
     LONG width, height;
     RECT wnd = { 0 }, rect = { 0 };
+    _CRT_UNUSED(hwnd);
+    _CRT_UNUSED(lp);
 
     GetWindowThreadProcessId(hwnd, &pid);
     if (pid != GetCurrentProcessId())
@@ -819,6 +832,7 @@ static void MyBinkClose(HBINK bink)
 
 static void DumpFramebuffers(const BINKFRAMEBUFFERS* set)
 {
+    _CRT_UNUSED(set);
 #if LOGGING
     Log("  TotalFrames=%d YABufferWidth=%u YABufferHeight=%u cRcBBufferWidth=%u cRcBBufferHeight=%u FrameNum=%u",
         set->TotalFrames, set->YABufferWidth, set->YABufferHeight, set->cRcBBufferWidth, set->cRcBBufferHeight,
@@ -842,7 +856,7 @@ static void DumpFramebuffers(const BINKFRAMEBUFFERS* set)
 #endif
 }
 
-static void centerPlane(MyBink* my, BINKPLANE* plane, U32 width, U32 height)
+static void centerPlane(BINKPLANE* plane, U32 width, U32 height)
 {
     U32 scaledWidth;
     S32 offset;
@@ -878,22 +892,22 @@ static void MyBinkRegisterFrameBuffers(HBINK bink, BINKFRAMEBUFFERS* set)
             if (set->Frames[i].YPlane.Buffer)
             {
                 memset(set->Frames[i].YPlane.Buffer, 0, set->Frames[i].YPlane.BufferPitch * set->YABufferHeight);
-                centerPlane(my, &set->Frames[i].YPlane, set->YABufferWidth, set->YABufferHeight);
+                centerPlane(&set->Frames[i].YPlane, set->YABufferWidth, set->YABufferHeight);
             }
             if (set->Frames[i].cRPlane.Buffer)
             {
                 memset(set->Frames[i].cRPlane.Buffer, 128, set->Frames[i].cRPlane.BufferPitch * set->cRcBBufferHeight);
-                centerPlane(my, &set->Frames[i].cRPlane, set->cRcBBufferWidth, set->cRcBBufferHeight);
+                centerPlane(&set->Frames[i].cRPlane, set->cRcBBufferWidth, set->cRcBBufferHeight);
             }
             if (set->Frames[i].cBPlane.Buffer)
             {
                 memset(set->Frames[i].cBPlane.Buffer, 128, set->Frames[i].cBPlane.BufferPitch * set->cRcBBufferHeight);
-                centerPlane(my, &set->Frames[i].cBPlane, set->cRcBBufferWidth, set->cRcBBufferHeight);
+                centerPlane(&set->Frames[i].cBPlane, set->cRcBBufferWidth, set->cRcBBufferHeight);
             }
             if (set->Frames[i].APlane.Buffer)
             {
                 memset(set->Frames[i].APlane.Buffer, 0, set->Frames[i].APlane.BufferPitch * set->YABufferHeight);
-                centerPlane(my, &set->Frames[i].APlane, set->YABufferWidth, set->YABufferHeight);
+                centerPlane(&set->Frames[i].APlane, set->YABufferWidth, set->YABufferHeight);
             }
         }
     }
@@ -905,8 +919,7 @@ static void MyBinkRegisterFrameBuffers(HBINK bink, BINKFRAMEBUFFERS* set)
 static void InstallDetours()
 {
     LONG err;
-    HINSTANCE hKernel32, hLocal;
-    WCHAR buf[_MAX_PATH + 1];
+    HINSTANCE hKernel32;
 
     Log("InstallDetours");
     if ((err = DetourTransactionBegin()) != NO_ERROR)
@@ -920,7 +933,7 @@ static void InstallDetours()
     }
 
 #define HOOK(fn, mod)                                                                                                  \
-    if (!(Orig##fn = (fn##_t)GetProcAddress(mod, #fn)))                                                                \
+    if ((Orig##fn = (fn##_t)GetProcAddress(mod, #fn)) == NULL)                                                         \
         Log("Failed to find " #fn);                                                                                    \
     if (Orig##fn && (err = DetourAttach((PVOID*)&Orig##fn, (void*)My##fn)) != NO_ERROR)                                \
     Log("DetourAttach(" #fn ") failed: %d", err)
@@ -1007,6 +1020,9 @@ static void RestoreDetours()
 
 BOOL WINAPI DllMain(HINSTANCE hInst, DWORD dwReason, LPVOID reserved)
 {
+    _CRT_UNUSED(hInst);
+    _CRT_UNUSED(reserved);
+
     if (DetourIsHelperProcess())
         return TRUE;
 
